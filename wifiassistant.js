@@ -9,16 +9,6 @@ function cmd(c) {
   catch (e) { return e.stdout || e.message; }
 }
 
-function isAdmin() {
-  try { execSync("net session", { stdio: "ignore" }); return true; }
-  catch { return false; }
-}
-
-if (!isAdmin()) {
-  console.log("CMD'yi YONETICI olarak acmalisin.");
-  process.exit(1);
-}
-
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
 // ---------- UI ----------
