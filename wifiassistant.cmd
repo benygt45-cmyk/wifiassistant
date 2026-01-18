@@ -1,2 +1,2 @@
 @echo off
-node "%~dp0termux.js"
+node "%~dp0wifiassistant.js"
