@@ -4,6 +4,6 @@ pkg install node.js
 
 node wifiassistant.js
 
-It is for Android
+It is for Android and PC
 
 Coded in Türkiye
