@@ -1,5 +1,5 @@
 /*
-  wifiassistant - Termux uyumlu (PRO extended)
+  wifiassistant - Termux uyumlu (PRO)
   Author: benygt45
 */
 
@@ -58,7 +58,7 @@ ${C.x}`);
   console.log("[18] Wi-Fi Profil Geri Yukle (PRO)");
   console.log("[19] QR Wi-Fi Olustur (PRO)");
   console.log("[20] Loglari Goruntule (PRO)");
-  console.log("[21] Yardim (Help)");
+  console.log("[21] Yardim");
   console.log("[0] Exit\n");
 }
 
@@ -85,27 +85,29 @@ function backupProfiles() {
 function restoreProfiles() {
   if(!fs.existsSync(BACKUP_FILE)) return "Yedek bulunamadi.";
   logEvent("RESTORE", "Profil geri yukleme denemesi");
-  return "Termux/Linux sinirlarina bagli olarak geri yukleme yapilir.";
+  return "Geri yukleme Termux/Linux sinirlarina baglidir.";
 }
 
 function advancedTest() {
   const res = cmd("ping -c 5 8.8.8.8");
-  const loss = res.match(/(\d+)% packet loss/);
+  if(!res) return "Ping basarisiz.";
+  const loss = res.match(/(\\d+)% packet loss/);
   const avg = res.match(/= [\\d.]+\\/([\\d.]+)\\//);
   const score = loss && avg ? Math.max(0,100-parseInt(loss[1])-parseFloat(avg[1])) : "N/A";
-  logEvent("TEST", `Loss:${loss?.[1]} Avg:${avg?.[1]} Score:${score}`);
-  return `${res}\nStabilite Skoru: ${score}`;
+  logEvent("TEST", `Loss:${loss ? loss[1] : "?"} Avg:${avg ? avg[1] : "?"} Score:${score}`);
+  return res + "\nStabilite Skoru: " + score;
 }
 
 function securityCheck() {
   const list = scanWifi();
+  if(!list) return "Tarama yapilamadi.";
   let warn = "";
   const seen = {};
   list.split("\n").forEach(l=>{
     const p = l.split(":");
     if(p.length < 4) return;
-    if(seen[p[1]] && seen[p[1]] !== p[2]) warn += `⚠ SSID Spoof: ${p[1]}\n`;
-    if(p[3] === "--") warn += `⚠ Acik Ag: ${p[1]}\n`;
+    if(seen[p[1]] && seen[p[1]] !== p[2]) warn += "SSID spoof supheli: " + p[1] + "\n";
+    if(p[3] === "--") warn += "Acik ag: " + p[1] + "\n";
     seen[p[1]] = p[2];
   });
   if(warn) logEvent("SECURITY", warn.trim());
@@ -118,33 +120,39 @@ function qrWifi() {
   const ssid = info.split(":")[1];
   const qr = `WIFI:T:WPA;S:${ssid};P:password;;`;
   try {
-    cmd(`qrencode -o ${ssid}.png "${qr}"`);
+    execSync(`qrencode -o ${ssid}.png "${qr}"`);
     return `QR olusturuldu: ${ssid}.png`;
   } catch {
-    return `QR STRING:\n${qr}`;
+    return "QR STRING:\n" + qr;
   }
 }
 
-// ---------- HELP (21) ----------
+// ---------- REPORTS ----------
+function jsonReport() {
+  const file = path.join(os.homedir(), "wifiassistant_report.json");
+  const data = { ip: ipInfo(), wifi: scanWifi(), system: systemInfo() };
+  fs.writeFileSync(file, JSON.stringify(data,null,2));
+  return file;
+}
+
+function txtReport() {
+  const file = path.join(os.homedir(), "wifiassistant_report.txt");
+  fs.writeFileSync(file, systemInfo() + "\n\n" + scanWifi());
+  return file;
+}
+
+// ---------- HELP ----------
 function helpMenu() {
   return `
-WIFIASSISTANT PRO - YARDIM
+wifiassistant PRO - Yardim
 
-Bu arac Termux ve Linux icin gelistirilmistir.
-
-PRO OZELLIKLER:
 - Wi-Fi profil yedekleme / geri yukleme
-- Gelismis baglanti testi (ping, kayip, skor)
-- Guvenlik uyarilari (acik ag, SSID spoof)
-- Loglama sistemi
-- QR Wi-Fi olusturma
+- Gelismis baglanti testi
+- Guvenlik uyarilari
+- Loglama
+- QR Wi-Fi
 
-NOT:
-- Root yoksa bazi ozellikler sinirli calisir
-- SALDIRI YAPMAZ, sadece analiz eder
-
-Log Dosyasi: ~/wifiassistant.log
-Author: benygt45
+Not: Root yoksa bazi ozellikler sinirlidir.
 `;
 }
 
