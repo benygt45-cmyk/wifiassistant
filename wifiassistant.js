@@ -22,13 +22,7 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-const C = {
-  c:"\x1b[36m",
-  g:"\x1b[32m",
-  y:"\x1b[33m",
-  r:"\x1b[31m",
-  x:"\x1b[0m"
-};
+const C = { c:"\x1b[36m", g:"\x1b[32m", y:"\x1b[33m", r:"\x1b[31m", x:"\x1b[0m" };
 
 function banner(){
   console.clear();
@@ -42,7 +36,7 @@ ${C.x}`);
 
   console.log("[1] Kayitli Wi-Fi Profilleri (sinirli)");
   console.log("[2] Aktif Wi-Fi Bilgisi (sinirli)");
-  console.log("[3] Cevredeki Wi-Fi Aglarini Tara");
+  console.log("[3] Cevredeki Wi-Fi Aglarini Tara (sinirli)");
   console.log("[4] IP Bilgisi");
   console.log("[5] Gateway / DNS");
   console.log("[6] Internet Kontrol (Ping)");
@@ -57,98 +51,81 @@ ${C.x}`);
   console.log("[15] JSON Rapor Olustur");
   console.log("[16] TXT Rapor Olustur");
   console.log("[17] Calisan Ag Servisleri");
-  console.log("[18] Yardim");
+  console.log("[18] Gelismis Baglanti Testi");
+  console.log("[19] Profil Yedekleme");
+  console.log("[20] Profil Geri Yukleme");
   console.log("[21] Yardim (Detayli)");
+  console.log("[22] Guvenlik Uyarilari");
+  console.log("[23] Loglama Sistemi");
+  console.log("[24] QR Wi-Fi Araclari");
+  console.log("[25] Yardim (Kisa)");
   console.log("[0] Exit\n");
 }
 
-// ---------- FUNCTIONS ----------
-const profiles = () =>
-  "Android Termux: Wi-Fi profilleri root yoksa listelenemez.";
-
-const activeWifi = () =>
-  "Android Termux: Aktif Wi-Fi bilgisi root gerekebilir.";
-
-const scanWifi = () =>
-  cmd("nmcli device wifi list 2>/dev/null");
-
-const ipInfo = () =>
-  cmd("ip addr");
-
-const gatewayDns = () =>
-  cmd("ip route && resolvectl status 2>/dev/null");
+// ---- MEVCUT FONKSIYONLAR ----
+const profiles = () => "Android Termux: Wi-Fi profilleri root yoksa listelenemez.";
+const activeWifi = () => "Android Termux: Aktif Wi-Fi bilgisi root gerekebilir.";
+const scanWifi = () => cmd("nmcli device wifi list 2>/dev/null");
+const ipInfo = () => cmd("ip addr");
+const gatewayDns = () => cmd("ip route && resolvectl status 2>/dev/null");
 
 function pingTest() {
   try {
     const res = execSync("ping -c 3 8.8.8.8", { encoding: "utf8" });
-
-    // ✅ HATALI SATIR DÜZELTİLDİ
     const avg = res.match(/= ([0-9.]+)\/([0-9.]+)\//);
-
-    if (avg) {
-      return `Ping OK | Ortalama: ${avg[2]} ms`;
-    }
-    return res;
+    return avg ? `Ping OK | Ortalama: ${avg[2]} ms` : res;
   } catch {
     return "Ping basarisiz veya internet yok.";
   }
 }
 
-const interfaces = () =>
-  cmd("ip link");
+const interfaces = () => cmd("ip link");
+const macAddr = () => cmd("ip link show | grep link/ether");
+const channelInfo = () => "Android Termux: Kanal bilgisi root gerekebilir.";
+const disconnectWifi = () => "Android Termux: Wi-Fi disconnect root gerekebilir.";
+const connectWifi = ssid => `Android Termux: Wi-Fi baglanmak root gerekebilir. SSID: ${ssid}`;
+const mtuInfo = () => cmd("ip link show | grep mtu");
+const dhcpInfo = () => cmd("nmcli device show 2>/dev/null");
+const systemInfo = () => `OS: ${os.type()} ${os.release()}\nUser: ${os.userInfo().username}`;
+const services = () => cmd("ps aux | grep -E 'NetworkManager|wpa'");
 
-const macAddr = () =>
-  cmd("ip link show | grep link/ether");
-
-const channelInfo = () =>
-  "Android Termux: Kanal bilgisi root gerekebilir.";
-
-const disconnectWifi = () =>
-  "Android Termux: Wi-Fi kesmek root ister.";
-
-const connectWifi = ssid =>
-  `Android Termux: Wi-Fi baglanmak root ister. SSID: ${ssid}`;
-
-const mtuInfo = () =>
-  cmd("ip link show | grep mtu");
-
-const dhcpInfo = () =>
-  cmd("nmcli device show 2>/dev/null");
-
-const systemInfo = () =>
-  `OS: ${os.type()} ${os.release()}
-User: ${os.userInfo().username}
-Node: ${process.version}`;
-
-const services = () =>
-  cmd("ps aux | grep -E 'NetworkManager|wpa'");
-
-// ---------- REPORTS ----------
-function jsonReport() {
-  const file = path.join(os.homedir(), "wifiassistant_report.json");
-  const data = {
-    user: "benygt45",
-    ip: ipInfo(),
-    wifi: scanWifi(),
-    system: systemInfo()
-  };
-  fs.writeFileSync(file, JSON.stringify(data, null, 2));
-  return file;
+// ---- YENI EKLENENLER ----
+function advancedPing() {
+  try {
+    const r = execSync("ping -c 5 1.1.1.1", { encoding:"utf8" });
+    const m = r.match(/= ([0-9.]+)\/([0-9.]+)\//);
+    return m ? `Gelismis Ping Ortalama: ${m[2]} ms` : r;
+  } catch {
+    return "Gelismis ping basarisiz.";
+  }
 }
 
-function txtReport() {
-  const file = path.join(os.homedir(), "wifiassistant_report.txt");
-  let t = "=== WIFIASSISTANT REPORT ===\n\n";
-  t += systemInfo() + "\n\n";
-  t += scanWifi();
-  fs.writeFileSync(file, t);
-  return file;
+const profileBackup = () =>
+  "Termux: Wi-Fi profilleri root olmadan yedeklenemez.";
+
+const profileRestore = () =>
+  "Termux: Wi-Fi profilleri root olmadan geri yuklenemez.";
+
+const securityWarnings = () =>
+  "Uyari: Acik veya sifresiz Wi-Fi aglari guvenlik riski tasir.";
+
+function logSystem() {
+  const file = path.join(os.homedir(), "wifiassistant.log");
+  fs.appendFileSync(file, new Date().toISOString() + " calistirildi\n");
+  return `Log yazildi: ${file}`;
 }
 
-// ---------- MENU ----------
-function pause() {
-  rl.question("\nEnter...", menu);
-}
+const qrWifi = () =>
+  "QR Wi-Fi: Termux terminal ortaminda sinirlidir.";
+
+const helpDetailed = () =>
+  "wifiassistant detayli yardim: Termux / Linux icin ag araci.";
+
+const helpShort = () =>
+  "wifiassistant: Termux ag araci.";
+
+// ---- MENU ----
+function pause() { rl.question("\nEnter...", menu); }
 
 function menu() {
   banner();
@@ -163,33 +140,22 @@ function menu() {
     if(c==="8"){ console.log(macAddr()); return pause(); }
     if(c==="9"){ console.log(channelInfo()); return pause(); }
     if(c==="10"){ console.log(disconnectWifi()); return pause(); }
-    if(c==="11"){
-      rl.question("SSID: ", s => {
-        console.log(connectWifi(s));
-        pause();
-      });
-      return;
-    }
+    if(c==="11"){ rl.question("SSID: ", s => { console.log(connectWifi(s)); pause(); }); return; }
     if(c==="12"){ console.log(mtuInfo()); return pause(); }
     if(c==="13"){ console.log(dhcpInfo()); return pause(); }
     if(c==="14"){ console.log(systemInfo()); return pause(); }
     if(c==="15"){ console.log("Olusturuldu:", jsonReport()); return pause(); }
     if(c==="16"){ console.log("Olusturuldu:", txtReport()); return pause(); }
     if(c==="17"){ console.log(services()); return pause(); }
-    if(c==="18"){ console.log("Termux / Linux icin yazilmistir."); return pause(); }
-    if(c==="21"){
-      console.log(`
-wifiassistant Termux sürümü
-• Node.js uyumlu
-• Root gerekebilir
-• Windows komutlari yoktur
-`);
-      return pause();
-    }
-    if(c==="0"){
-      rl.close();
-      process.exit(0);
-    }
+    if(c==="18"){ console.log(advancedPing()); return pause(); }
+    if(c==="19"){ console.log(profileBackup()); return pause(); }
+    if(c==="20"){ console.log(profileRestore()); return pause(); }
+    if(c==="21"){ console.log(helpDetailed()); return pause(); }
+    if(c==="22"){ console.log(securityWarnings()); return pause(); }
+    if(c==="23"){ console.log(logSystem()); return pause(); }
+    if(c==="24"){ console.log(qrWifi()); return pause(); }
+    if(c==="25"){ console.log(helpShort()); return pause(); }
+    if(c==="0"){ rl.close(); process.exit(0); }
     menu();
   });
 }
