@@ -1,6 +1,6 @@
 git clone https://github.com/benygt45-cmyk/wifiassistant.git
 
-pkg install node.js
+pkg install nodejs
 
 cd wifiassistant
 
